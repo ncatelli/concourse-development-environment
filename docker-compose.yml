@@ -1,0 +1,82 @@
+version: '3'
+services:
+  db:
+    image: postgres:9.6
+    environment:
+      POSTGRES_DB: concourse
+      POSTGRES_USER: concourse
+      POSTGRES_PASSWORD: changeme
+      PGDATA: /database
+    networks:
+      - backend
+
+  web:
+    image: concourse/concourse
+    command: 
+      - web
+    ports: 
+      - "8080:8080"
+    volumes: 
+      - "web_keys:/concourse-keys:ro"
+    restart: unless-stopped 
+    environment:
+      CONCOURSE_BASIC_AUTH_USERNAME: concourse
+      CONCOURSE_BASIC_AUTH_PASSWORD: changeme
+      CONCOURSE_EXTERNAL_URL: "${CONCOURSE_EXTERNAL_URL}"
+      CONCOURSE_POSTGRES_HOST: 'db'
+      CONCOURSE_POSTGRES_USER: concourse
+      CONCOURSE_POSTGRES_PASSWORD: changeme
+      CONCOURSE_POSTGRES_DATABASE: concourse
+    networks:
+      - frontend
+      - backend
+    depends_on: 
+      - db
+      - ready
+
+  worker:
+    build:
+      context: ./worker
+    privileged: true
+    command: worker
+    volumes: 
+      - "worker_keys:/concourse-keys:ro"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    environment:
+      CONCOURSE_TSA_HOST: web
+    networks:
+      - frontend
+    depends_on:
+      - web
+
+  keygen_sidecar:
+    build:
+      context: ./keygen_sidecar
+    working_dir: "/data"
+    volumes:
+      - "worker_keys:/data/worker"
+      - "web_keys:/data/web"
+
+  fly:
+    build:
+      context: ./fly
+      args:
+        VERSION: "3.9.2"
+    volumes:
+      - flyrc:/root
+    networks:
+      - frontend
+
+  ready:
+    image: hello-world:latest
+    depends_on:
+      - keygen_sidecar
+
+volumes:
+  flyrc:
+  worker_keys:
+  web_keys:
+
+networks:
+  frontend:
+  backend:
