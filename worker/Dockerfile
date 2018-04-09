@@ -1,4 +1,4 @@
-FROM concourse/concourse
+FROM concourse/concourse:3.9.2
 
 LABEL maintainer="Nate Catelli <ncatelli@packetfire.org>"
 LABEL description="Containerized version of a concourse worker running docker."

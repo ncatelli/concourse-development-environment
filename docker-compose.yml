@@ -11,7 +11,7 @@ services:
       - backend
 
   web:
-    image: concourse/concourse
+    image: "concourse/concourse:3.9.2"
     command: 
       - web
     ports: 
